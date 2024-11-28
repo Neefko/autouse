@@ -3,8 +3,10 @@ import pyautogui
 import subprocess
 import webbrowser
 import socket
+import smtplib
 
 app = Flask(__name__)
+
 
 pyautogui.FAILSAFE = False
 
@@ -17,7 +19,6 @@ def send_data():
         subprocess.call(r'C:\Program Files\Google\Chrome\Application\chrome.exe')
 
     elif action == 'explorer':
-        print('Explorer')
         subprocess.call(r'C:\Windows\explorer.exe', shell=True)
 
     elif action == 'volpl':
@@ -83,21 +84,33 @@ def update_mouse():
                 return {'status': 'success'}
             else:
                 pyautogui.scroll(clicks)
-        else:
-            return {'error': 'Invalid delta'}, 400
 
     return {'status': 'success'}
 @app.route('/links', methods=['POST'])
 def open_links():
     data = request.json
-    links = data.get('links')
-    if isinstance(links, list) and all(isinstance(link, str) for link in links):
-        for link in links:
-            webbrowser.open(link, new=2)
-        return {'status': 'success'}
-    else:
-        return {'error': 'Invalid links'}, 400
+    link = data.get('link')
+    webbrowser.open(link, new=2)
+    return {'status': 'success'}
+
+def my_local_ip():
+    with socket.socket(socket.AF_INET, socket.SOCK_DGRAM) as sock:
+        sock.connect(("8.8.8.8", 80))  # Google DNS
+        local_ip = sock.getsockname()[0]
+
+        with open("email.txt", "r") as email:
+            em = email.readline()
+            passw = email.readlines()[-1]
+
+        smtp_server = smtplib.SMTP('smtp.gmail.com', 587)
+        smtp_server.starttls()
+        smtp_server.login(em, passw)
+        smtp_server.sendmail(em, em, local_ip)
+        smtp_server.quit()
+
+        return local_ip
+
 
 
 if __name__ == '__main__':
-    app.run(host='0.0.0.0', port=5000)
+    app.run(host=my_local_ip(), port=5000)
